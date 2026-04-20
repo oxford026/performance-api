@@ -7,6 +7,18 @@ app.use(cors());
 app.use(express.json());
 
 const db = new sqlite3.Database("db.sqlite");
+db.run(`
+  CREATE TABLE IF NOT EXISTS metrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    commit_hash TEXT,
+    branch TEXT,
+    environment TEXT,
+    fcp REAL,
+    lcp REAL,
+    tbt REAL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
 function extractMetrics(filePath) {
   try {
     const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
