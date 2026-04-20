@@ -1,0 +1,7 @@
+{
+  "audits": {
+    "first-contentful-paint": { "numericValue": 2500 },
+    "largest-contentful-paint": { "numericValue": 4000 },
+    "total-blocking-time": { "numericValue": 300 }
+  }
+}
