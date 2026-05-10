@@ -24,9 +24,17 @@ function extractMetrics(filePath) {
     const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
 
     return {
-      fcp: data.audits["first-contentful-paint"].numericValue / 1000,
-      lcp: data.audits["largest-contentful-paint"].numericValue / 1000,
-      tbt: data.audits["total-blocking-time"].numericValue,
+      fcp: Number(
+        (data.audits["first-contentful-paint"].numericValue / 1000).toFixed(2),
+      ),
+
+      lcp: Number(
+        (data.audits["largest-contentful-paint"].numericValue / 1000).toFixed(
+          2,
+        ),
+      ),
+
+      tbt: Number(data.audits["total-blocking-time"].numericValue.toFixed(2)),
     };
   } catch (error) {
     console.error("Error reading Lighthouse file:", error);
@@ -79,6 +87,17 @@ app.get("/", (req, res) => {
   res.send("API is running");
 });
 
+function getStatus(metrics) {
+  if (metrics.lcp >= 4 || metrics.tbt >= 300) {
+    return "Critical";
+  }
+
+  if (metrics.lcp >= 2.5 || metrics.tbt >= 200) {
+    return "Warning";
+  }
+
+  return "Excellent";
+}
 app.get("/metrics", (req, res) => {
   const { environment } = req.query;
 
@@ -96,7 +115,12 @@ app.get("/metrics", (req, res) => {
     if (err) {
       res.status(500).json({ error: err.message });
     } else {
-      res.json(rows);
+      const results = rows.map((row) => ({
+        ...row,
+        status: getStatus(row),
+      }));
+
+      res.json(results);
     }
   });
 });
