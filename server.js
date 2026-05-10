@@ -88,11 +88,11 @@ app.get("/", (req, res) => {
 });
 
 function getStatus(metrics) {
-  if (metrics.lcp >= 4 || metrics.tbt >= 300) {
+  if (metrics.lcp >= 4 || metrics.fcp >= 3.0 || metrics.tbt >= 500) {
     return "Critical";
   }
 
-  if (metrics.lcp >= 2.5 || metrics.tbt >= 200) {
+  if (metrics.lcp >= 2.5 || metrics.fcp >= 2.0 || metrics.tbt >= 200) {
     return "Warning";
   }
 
@@ -117,7 +117,12 @@ app.get("/metrics", (req, res) => {
     } else {
       const results = rows.map((row) => ({
         ...row,
+
+        tbt: Math.round(row.tbt),
+
         status: getStatus(row),
+
+        alerts: checkPerformance(row),
       }));
 
       res.json(results);
@@ -164,8 +169,20 @@ app.get("/metrics/chart/avg", (req, res) => {
   });
 });
 app.get("/metrics/alerts", (req, res) => {
-  db.all("SELECT * FROM metrics", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+  const { environment } = req.query;
+
+  let query = "SELECT * FROM metrics";
+  let params = [];
+
+  if (environment) {
+    query += " WHERE environment = ?";
+    params.push(environment);
+  }
+
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
 
     const results = rows.map((row) => ({
       ...row,
@@ -236,15 +253,15 @@ app.post("/metrics", (req, res) => {
 function checkPerformance(metrics) {
   const alerts = [];
 
-  if (metrics.lcp > 2.5) {
+  if (metrics.lcp >= 4) {
     alerts.push("LCP is too high (slow loading)");
   }
 
-  if (metrics.fcp > 1.8) {
+  if (metrics.fcp >= 3.0) {
     alerts.push("FCP is slower than expected");
   }
 
-  if (metrics.tbt > 200) {
+  if (metrics.tbt >= 500) {
     alerts.push("TBT indicates blocking issues");
   }
 
